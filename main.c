@@ -74,6 +74,7 @@ static volatile uint16_t uartRxOverflow = 0;
 
 int main(void)
 {
+    int counter = 20;
 	WDTCTL = WDTPW | WDTHOLD;	// stop watchdog timer
 	
     // Minimum Vcore setting required for the USB API is PMM_CORE_LEVEL_2 .
@@ -111,7 +112,13 @@ int main(void)
     USCI_A_UART_clearInterrupt(UART_BRIDGE, USCI_A_UART_RECEIVE_INTERRUPT);
 
     __enable_interrupt();  // Enable interrupts globally
-
+	while(counter--){
+		GPIO_setOutputHighOnPin(GPIO_PORT_P4, GPIO_PIN3);	
+            __delay_cycles(10000);
+		GPIO_setOutputLowOnPin(GPIO_PORT_P4, GPIO_PIN3);	
+            __delay_cycles(10000);
+	}
+   GPIO_setOutputLowOnPin(GPIO_PORT_P4, GPIO_PIN3);	
     while (1)
     {
         uint8_t sendError;

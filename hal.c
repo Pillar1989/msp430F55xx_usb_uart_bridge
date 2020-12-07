@@ -96,6 +96,9 @@ void hal_init(uint32_t mclkFreq)
     GPIO_setAsOutputPin(   GPIO_PORT_P4, GPIO_PIN6);
 
 
+    GPIO_setOutputHighOnPin(GPIO_PORT_P6, GPIO_PIN2);
+    GPIO_setOutputHighOnPin(GPIO_PORT_P6, GPIO_PIN3);
+
 #endif //LAUNCHPAD
     UCS_initClockSignal(
        UCS_FLLREF,
