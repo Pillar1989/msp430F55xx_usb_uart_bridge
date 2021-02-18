@@ -69,6 +69,7 @@
 #define CRC_DEBUG
 //#define SKIP_CRC
 
+volatile bool TimerA0_CCR0_interrupt_hit = 0;
 // Global flags set by events
 volatile uint8_t bCDCDataReceived_event = FALSE;  // Flag set by event handler to
                                                // indicate data has been
@@ -125,6 +126,7 @@ void poll_hdlc(int reset)
     }
 
     while(!bWPANDataReceived_event && !RINGBUF_empty(&uartRing)) {
+
         if(currentAddress == ADDRESS_WPAN) {
             if(USBWPAN_getInterfaceStatus(WPAN0_INTFNUM) & USBWPAN_WAITING_FOR_SEND) {
                 return;
@@ -251,10 +253,22 @@ void poll_passthrough(void)
     }
 }
 
+
+
+void initTimerA(){
+    P6DIR |= BIT2;                            // P1.0 output
+    TA0CCTL0 = CCIE;                          // CCR0 interrupt enabled
+    TA0CCR0 = 50000;
+    TA0CTL = TASSEL_2 + MC_1 + TACLR;         // SMCLK, upmode, clear TAR
+
+    __bis_SR_register(LPM0_bits + GIE);       // Enter LPM0, enable interrupts
+    __no_operation();                         // For debugger
+}
+
 int main(void)
 {
-	WDTCTL = WDTPW | WDTHOLD;	// stop watchdog timer
-	
+    WDTCTL = WDTPW | WDTHOLD;	// stop watchdog timer
+    initTimerA();
     // Use Level 3 for high speed system clock
     PMM_setVCore(PMM_CORE_LEVEL_3);
     hal_init(MCLK_FREQUENCY); //MCLK=SMCLK=FLL=MCLK_FREQUENCY; ACLK=REFO=32kHz
@@ -293,6 +307,11 @@ int main(void)
 
     while (1)
     {
+        if( TimerA0_CCR0_interrupt_hit==1){
+            P6OUT ^= BIT2; 
+            TimerA0_CCR0_interrupt_hit=0;
+        }
+
         if(bCDCBreak_event == 3) {
             //Break Set/Cleared, jump to BSL
 //            __disable_interrupt(); // disable interrupts
@@ -437,4 +456,19 @@ USCI_BRIDGE_ISR (void)
             break;
         default: break;
     }
+}
+
+
+// Timer0 A0 interrupt service routine
+#if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
+#pragma vector=TIMER0_A0_VECTOR
+__interrupt void TIMER0_A0_ISR(void)
+#elif defined(__GNUC__)
+void __attribute__ ((interrupt(TIMER0_A0_VECTOR))) TIMER0_A0_ISR (void)
+#else
+#error Compiler not supported!
+#endif
+{
+  //P6OUT ^= BIT2;                            
+  TimerA0_CCR0_interrupt_hit = 1;
 }
